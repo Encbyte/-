@@ -1,0 +1,214 @@
+function Signature(MainTable, DeputyTable, TargetTable, ToastOff)
+    gg.setVisible(false)
+    gg.clearResults()
+    if type(MainTable[6]) == number then
+        gg.setRanges(MainTable[6])
+      elseif type(MainTable[6]) == table then
+        gg.setRanges(table.unpack(MainTable[6]))
+    end
+    gg.searchNumber(MainTable[1], MainTable[5], false, gg.SIGN_EQUAL, MainTable[3] or 0, MainTable[4] or -1)
+    if gg.getResultsCount() > 0 then
+        if MainTable[2] then
+            gg.searchAddress(MainTable[2], -1, MainTable[5], gg.SIGN_EQUAL, 0, -1)
+        end
+        if gg.getResultsCount() > 0 then
+            local ResultsA = gg.getResults(gg.getResultsCount())
+            if DeputyTable and #DeputyTable > 0 then
+                local ResultsB = ResultsA
+                local ResultsC = {}
+                ResultsA = {}
+                for k, v in pairs(ResultsB) do
+                    ResultsA[k] = { ['address'] = v.address + DeputyTable[1][2], ['flags'] = DeputyTable[1][3] }
+                end
+                for i = 1, #DeputyTable do
+                    ResultsC = gg.getValues(ResultsA)
+                    ResultsA = {}
+                    for k, v in pairs(ResultsC) do
+                        if v.value == DeputyTable[i][1] then
+                            if DeputyTable[i + 1] then
+                                ResultsA[#ResultsA + 1] = { ['address'] = v.address - DeputyTable[i][2] + DeputyTable[i + 1][2], ['flags'] = DeputyTable[i + 1][3] }
+                              else
+                                ResultsA[#ResultsA + 1] = { ['address'] = v.address - DeputyTable[i][2], ['flags'] = DeputyTable[i][3] }
+                            end
+                        end
+                    end
+                    if #ResultsA == 0 then
+                        gg.toast("第" .. i .. "个副特征码搜索失败")
+                        break
+                    end
+                end
+            end
+            if TargetTable then
+                local LoadTable, SetTableA = {},{}
+                for m, n in pairs(ResultsA) do
+                    for k, v in pairs(TargetTable) do
+                        if v[1] then
+                            SetTableA[#SetTableA + 1] = { ['address'] = n.address + v[2], ['value'] = v[1], ['flags'] = v[3] }
+                        end
+                        LoadTable[#LoadTable + 1] = { ['address'] = n.address + v[2], ['flags'] = v[3] }
+                    end
+                end
+                if #SetTableA > 0 then
+                    gg.setValues(SetTableA)
+                end
+                gg.loadResults(LoadTable)
+            end
+          else
+            if ToastOff then
+                gg.toast("蒙版搜索失败")
+            end
+        end
+      else
+        if ToastOff then
+            gg.toast("主特征码搜索搜索失败")
+        end
+    end
+end
+
+function onclick()
+    gg.setVisible(false)
+    repeat until gg.isVisible(true)
+    gg.setVisible(false)
+end
+
+function setnow(t)
+    local SetTableNow = {}
+    for k, v in pairs(t) do
+        SetTableNow[#SetTableNow + 1] = { ['address'] = v[1] + v[2], ['value'] = v[3], ['flags'] = v[4] }
+    end
+    gg.setValues(SetTableNow)
+end
+
+function set(T)
+    for k, v in pairs(T) do
+        SetTable[#SetTable + 1] = { ['address'] = v[1] + v[2], ['value'] = v[3], ['flags'] = v[4] }
+    end
+end
+
+function Get(T)
+    local t1 = {}
+    for k, v in pairs(T) do
+        t1[#t1 + 1] = { ['address'] = v[1] + v[2], ['flags'] = v[3] }
+    end
+    return gg.getValues(t1)
+end
+
+function get(address, pyl, flags)
+    return gg.getValues({ { ['address'] = address + pyl, ['flags'] = flags } })[1].value
+end
+
+function LoadAdd(Table)
+    local k = {}
+    for i = 1, #Table do
+        k[i] = { ['address'] = Table[i][1] + Table[i][2], ['flags'] = Table[i][3] }
+    end
+    gg.loadResults(k)
+end
+
+function FreezeValue(Table, zt)
+    if #Table > 0 then
+        local t1 = Table
+        for k, v in pairs(t1) do
+            t1[k].freeze = zt
+        end
+        gg.addListItems(t1)
+    end
+end
+
+function xhtz(add, pyl, t1, t2)
+    local k1, k2 = {},{}
+    k1[#k1 + 1] = gg.getValues({ { ['address'] = add + pyl, ['flags'] = 4 } })
+    for k, v in pairs(t1) do
+        k1[#k1 + 1] = gg.getValues({ { ['address'] = (k1[#k1][1].value & 0xFFFFFFFF) + v, ['flags'] = 4 } })
+    end
+    if #t2 > 0 then
+        for k, v in pairs(t2) do
+            k2[#k2 + 1] = { ['address'] = k1[#k1][1].address + v, ['flags'] = 4 }
+        end
+        return gg.getValues(k2)
+      else
+        return gg.getValues({ { ['address'] = k1[#k1][1].address, ['flags'] = 4 } })
+    end
+end
+
+function fzd(num)
+    local num = tonumber(num)
+    if num == 0 then
+        return 0
+      else
+        gg.setValues({ { ['address'] = FzdAddress, ['value'] = num, ['flags'] = 16 } })
+        local T16 = gg.getValues({ { ['address'] = FzdAddress, ['flags'] = 4 } })
+        return T16[1].value
+    end
+end
+
+function tz(value, pyl, flags)
+    local T, value = {}, tonumber(value)
+    if value ~= 0 then
+        if value < 0 then
+            T[1] = (value & 0xFFFFFFFF) + pyl
+          else
+            T[1] = value + pyl
+        end
+        return gg.getValues({ { ['address'] = T[1], ['flags'] = flags } })
+      else
+        gg.toast("跳转的值不能为零")
+        return nil
+    end
+end
+
+function Choice(MenuTable, String, MainMenu)
+    local Name, Fun = {},{}
+    for k, v in pairs(MenuTable) do
+        Name[k] = v[1]
+        Fun[k] = v[2]
+    end
+    local YD = gg.choice(Name, nil, String)
+    if YD ~= nil then
+        load(Fun[YD])()
+    end
+
+    while true do
+        if gg.isVisible(true) then
+            gg.setVisible(false)
+            load(MainMenu)()
+            break
+        end
+    end
+end
+
+local init_tabkey={"address","flags","value","freeze"}
+function seaio(t,a,b,c,d) t[#t+1]={} t[#t][init_tabkey[1]]=a t[#t][init_tabkey[2]]=b
+    if c then t[#t][init_tabkey[3]]=c
+    end
+    if d then t[#t][init_tabkey[4]]=d
+    end
+end
+
+function dz(a,b,c,d) mmm={{address=a,flags=b,value=c,freeze=d} }
+    gg.setValues(mmm) gg.addListItems(mmm) return gg.getValues(mmm)
+end
+
+function value(a,b) local l={} seaio(l,a,b) return gg.getValues(l)[1].value
+end
+
+function JmXf(NC, SZ, LX, GS, PY, LX2, SZ2, PY2, BZ)
+    gg.clearResults() gg.setRanges(NC) gg.searchNumber(SZ, LX) gg.refineNumber(GS, LX)
+    local sszs=gg.getResultsCount() local hqjg=gg.getResults(sszs) local m={} for i, v in pairs(hqjg) do m[#m+1]={} m[#m].address=v.address+PY m[#m].flags=LX2
+    end
+    m=gg.getValues(m) for i, v in pairs(m) do
+        if v.value==SZ2 then addr={} addr[1]={address=v.address+PY2, flags=4, name=BZ} gg.addListItems(addr) break
+        end
+    end
+    return gg.getValues(addr)[1].address
+end
+
+function searchArray(array, keyword)
+    local result = {}
+    for key, value in pairs(array) do
+        if string.find(key, keyword) then
+            table.insert(result, key)
+        end
+    end
+    return result
+end
